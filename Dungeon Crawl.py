@@ -4,12 +4,16 @@
 # File Name : Dungeon Crawl.py
 # Description : Beta Release of Dungeon Crawl
 
+from typing import final
 import pygame
 import os
 import random
 import math
+import Character
 
-SCRN_W, SCRN_H = 700, 400
+SCRN_W = 700
+SCRN_H = 400
+
 pygame.init()
 screen = pygame.display.set_mode((SCRN_W, SCRN_H))
 arena = pygame.Surface((700, 400))
@@ -23,8 +27,6 @@ clock = pygame.time.Clock()
 player = None
 
 WHITE = (255, 255, 255)
-RED = (255, 0, 0)
-BLACK = (0, 0, 0)
 
 
 def load_image(name):
@@ -33,18 +35,12 @@ def load_image(name):
 
     return image, image.get_rect()
 
+
 def load_music(name):
     path = os.path.join('music', name)
     music = pygame.mixer.music.load(path)
 
     return music
-
-
-path = os.path.join('data', 'walk.wav')
-walk = pygame.mixer.Sound(path)
-
-path = os.path.join('data', 'attack.wav')
-attack = pygame.mixer.Sound(path)
 
 
 def tint(surf, tint_color):
@@ -125,82 +121,6 @@ def tint(surf, tint_color):
 #     "idle" : Idle(),
 #     "right" : Move_Right()
 # }
-
-class Character(pygame.sprite.Sprite):
-    """Base class for all character objects"""
-
-    def __init__(self, name, group,  pos, health):
-        """Base class constructor"""
-
-        # Retrieve sprite
-        self.image, self.rect = load_image(name)
-        self.rect.x, self.rect.y = pos
-
-        self.health = health
-
-        self.invincible = False
-        self.dmg_time = 0
-
-        # Group in which the character is contained in
-        self.group = group
-
-        # Add to group
-        super().__init__(group)
-
-    def take_dmg(self, dmg):
-        """Reduces health by dmg (int)"""
-
-        if not self.invincible:
-
-            self.health -= dmg
-            self.invincible = True
-            self.dmg_time = pygame.time.get_ticks()
-
-    def heal(self, heal):
-        """Increases health by heal (int)"""
-
-        self.health += heal
-
-    def move(self, delta_x=0, delta_y=0):
-        """Adjusts position of character"""
-        self.delta_x, self.delta_y = delta_x, delta_y
-
-        self.rect.x += delta_x * self.speed
-        self.rect.y += delta_y * self.speed
-
-        if self.rect.top < 50:
-            self.rect.top = 50
-        elif self.rect.bottom > 325:
-            self.rect.bottom = 325
-
-        if self.rect.left < 50:
-            self.rect.left = 50
-        elif self.rect.right > 650:
-            if self.rect.center[1] < 190 or self.rect.center[1] > 225:
-                self.rect.right = 650
-
-    def update(self, delta_x=0, delta_y=0):
-        """pygame update function called by groups"""
-
-        if self.health <= 0:
-            print("dead")
-            self.group.remove(self)
-
-        self.move(delta_x, delta_y)
-
-        self.time_since = pygame.time.get_ticks() - self.dmg_time
-
-        # 1/2 second
-        if self.time_since > 500:
-            self.invincible = False
-
-    def draw_health(self):
-        health_percent = self.health/self.max_hp
-
-        pygame.draw.rect(
-            screen, BLACK, (self.rect.left, self.rect.top - 7, 15, 3))
-        pygame.draw.rect(screen, RED, (self.rect.left,
-                         self.rect.top - 7, 15 * health_percent, 3))
 
 
 class Player(Character):
@@ -487,105 +407,6 @@ class Projectile(pygame.sprite.Sprite):
         for sprite in pygame.sprite.spritecollide(player, projectiles, False):
             player.take_dmg(self.dmg)
             projectiles.remove(sprite)
-
-
-class Weapons(pygame.sprite.Sprite):
-    """Base class for all weapons"""
-
-    def __init__(self, name):
-
-        self.name = name
-        self.dir = "right"
-        self.image = self.image_right
-        self.rect = self.image.get_rect()
-
-        self.dx, self.dy = 0, 0
-        self.attacking = False
-        self.reversed = False
-
-        self.lock = False
-
-        super().__init__()
-
-    def attack(self, direction):
-        self.dir = direction
-        self.attacking = True
-        self.time_atk = pygame.time.get_ticks()
-
-        if self.dir == "up":
-            self.image = self.image_up
-            self.dy = -2
-        elif self.dir == "down":
-            self.image = self.image_down
-            self.dy = 2
-        elif self.dir == "left":
-            self.image = self.image_left
-            self.dx = -2
-        elif self.dir == "right":
-            self.image = self.image_right
-            self.dx = 2
-
-        self.rect = self.image.get_rect()
-        attack.play()
-
-    def update(self):
-
-        if self.attacking:
-
-            self.rect.x += self.dx
-            self.rect.y += self.dy
-
-            self.time_since_atk = pygame.time.get_ticks() - self.time_atk
-
-            if self.time_since_atk >= 500:
-                self.attacking = False
-                self.reversed = False
-                self.dx, self.dy = 0, 0
-
-            elif self.time_since_atk >= 250 and not self.reversed:
-                self.reversed = True
-                self.dx *= -1
-                self.dy *= -1
-
-
-class Sword(Weapons):
-    """Class for sword type weapon"""
-
-    def __init__(self, name, img, dmg):
-
-        self.image_up, self.rect_up = load_image(os.path.join(img, "0.png"))
-        self.image_down, self.rect_down = load_image(
-            os.path.join(img, "180.png"))
-        self.image_left, self.rect_left = load_image(
-            os.path.join(img, "270.png"))
-        self.image_right, self.rect_right = load_image(
-            os.path.join(img, "90.png"))
-
-        self.desc = "Sword type"
-        self.dmg = dmg
-        self.durability = 100
-
-        super().__init__(name)
-
-
-class Hammer(Weapons):
-    """Class for sword type weapon"""
-
-    def __init__(self, name, img, dmg):
-
-        self.image_up, self.rect_up = load_image(os.path.join(img, "0.png"))
-        self.image_down, self.rect_down = load_image(
-            os.path.join(img, "180.png"))
-        self.image_left, self.rect_left = load_image(
-            os.path.join(img, "270.png"))
-        self.image_right, self.rect_right = load_image(
-            os.path.join(img, "90.png"))
-
-        self.desc = "Hammer type"
-        self.dmg = dmg
-        self.durability = 100
-
-        super().__init__(name)
 
 
 class Interactables(pygame.sprite.Sprite):
