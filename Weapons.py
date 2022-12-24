@@ -1,3 +1,4 @@
+import pygame
 import os
 
 
@@ -41,7 +42,13 @@ class Weapons(pygame.sprite.Sprite):
             self.dx = 2
 
         self.rect = self.image.get_rect()
-        attack.play()
+        self.attack.play()
+
+    def load_image(name):
+        path = os.path.join('data', name)
+        image = pygame.image.load(path)
+
+        return image, image.get_rect()
 
     def update(self):
 
@@ -68,12 +75,13 @@ class Sword(Weapons):
 
     def __init__(self, name, img, dmg):
 
-        self.image_up, self.rect_up = load_image(os.path.join(img, "0.png"))
-        self.image_down, self.rect_down = load_image(
+        self.image_up, self.rect_up = self.load_image(
+            os.path.join(img, "0.png"))
+        self.image_down, self.rect_down = self.load_image(
             os.path.join(img, "180.png"))
-        self.image_left, self.rect_left = load_image(
+        self.image_left, self.rect_left = self.load_image(
             os.path.join(img, "270.png"))
-        self.image_right, self.rect_right = load_image(
+        self.image_right, self.rect_right = self.load_image(
             os.path.join(img, "90.png"))
 
         self.desc = "Sword type"
@@ -88,12 +96,13 @@ class Hammer(Weapons):
 
     def __init__(self, name, img, dmg):
 
-        self.image_up, self.rect_up = load_image(os.path.join(img, "0.png"))
-        self.image_down, self.rect_down = load_image(
+        self.image_up, self.rect_up = self.load_image(
+            os.path.join(img, "0.png"))
+        self.image_down, self.rect_down = self.load_image(
             os.path.join(img, "180.png"))
-        self.image_left, self.rect_left = load_image(
+        self.image_left, self.rect_left = self.load_image(
             os.path.join(img, "270.png"))
-        self.image_right, self.rect_right = load_image(
+        self.image_right, self.rect_right = self.load_image(
             os.path.join(img, "90.png"))
 
         self.desc = "Hammer type"
@@ -101,3 +110,31 @@ class Hammer(Weapons):
         self.durability = 100
 
         super().__init__(name)
+
+
+class Projectile(pygame.sprite.Sprite):
+
+    def __init__(self, pos, dir_vect, speed):
+        super().__init__()
+
+        path = os.path.join('data', "mage_projectile")
+        self.image = pygame.image.load(path)
+        self.rect = self.image.get_rect()
+        self.rect.x, self.rect.y = pos
+
+        self.dmg = 30
+        self.speed = speed
+        self.dx, self.dy = dir_vect
+        self.time_created = pygame.time.get_ticks()
+
+    def update(self, player, projectiles):
+
+        if pygame.time.get_ticks() - self.time_created > 1500:
+            self.kill()
+
+        self.rect.x += self.dx * self.speed
+        self.rect.y += self.dy * self.speed
+
+        for sprite in pygame.sprite.spritecollide(player, projectiles, False):
+            player.take_dmg(self.dmg)
+            projectiles.remove(sprite)

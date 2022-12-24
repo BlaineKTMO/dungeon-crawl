@@ -10,6 +10,9 @@ import os
 import random
 import math
 import Character
+import Immovables
+import Weapons
+import Interactables
 
 SCRN_W = 700
 SCRN_H = 400
@@ -122,321 +125,6 @@ def tint(surf, tint_color):
 #     "right" : Move_Right()
 # }
 
-
-class Player(Character):
-    """Player controlled character"""
-
-    UP = pygame.K_w
-    DOWN = pygame.K_s
-    LEFT = pygame.K_a
-    RIGHT = pygame.K_d
-
-    arr_up = pygame.K_UP
-    arr_down = pygame.K_DOWN
-    arr_left = pygame.K_LEFT
-    arr_right = pygame.K_RIGHT
-
-    def __init__(self, speed, **kwargs):
-
-        super().__init__(**kwargs)
-
-        self.dir = "RIGHT"
-        self.speed = speed
-
-        self.max_hp = 250
-        self.mana = 50
-        self.item = None
-        self.weapon = None
-
-    def use_key(self):
-        pass
-
-    def pick_up_item(self, _item):
-        pass
-
-    def pick_up_weapon(self, weapon):
-        self.weapon = weapon
-        self.weapon.rect.x, self.weapon.rect.y = self.rect.x + 8, self.rect.y
-
-    def health_pot(self):
-        pass
-
-    def update(self, keys):
-        delta_x, delta_y = 0, 0
-
-        # Player movement
-        if not self.weapon.attacking:
-            if keys[self.UP]:
-                delta_y = -1
-                walk.play()
-            elif keys[self.DOWN]:
-                delta_y = 1
-                walk.play()
-            elif keys[self.LEFT]:
-                delta_x = -1
-                walk.play()
-            elif keys[self.RIGHT]:
-                delta_x = 1
-                walk.play()
-        else:
-            delta_x, delta_y = 0, 0
-
-        if keys[self.arr_up]:
-            self.weapon.attack("up")
-            self.weapon.rect.x, self.weapon.rect.y = self.rect.x + \
-                (self.rect.width/2), self.rect.y - 25
-
-        elif keys[self.arr_down]:
-            self.weapon.attack("down")
-            self.weapon.rect.x, self.weapon.rect.y = self.rect.x + \
-                (self.rect.width/2), self.rect.y + 20
-
-        elif keys[self.arr_left]:
-            self.weapon.attack("left")
-            self.weapon.rect.x, self.weapon.rect.y = self.rect.x - \
-                25, self.rect.y + (self.rect.height/2)
-
-        elif keys[self.arr_right]:
-            self.weapon.attack("right")
-            self.weapon.rect.x, self.weapon.rect.y = self.rect.x + \
-                16, self.rect.y + (self.rect.height/2)
-
-        super().update(delta_x, delta_y)
-        self.weapon.update()
-
-        # Keeps weapon a fixed distance from player
-        if not self.weapon.attacking:
-            if self.weapon != None:
-                if self.weapon.dir == "up":
-                    self.weapon.rect.x, self.weapon.rect.y = self.rect.x + \
-                        (self.rect.width/2), self.rect.y - 25
-
-                elif self.weapon.dir == "down":
-                    self.weapon.rect.x, self.weapon.rect.y = self.rect.x + \
-                        (self.rect.width/2), self.rect.y + 20
-
-                elif self.weapon.dir == "left":
-                    self.weapon.rect.x, self.weapon.rect.y = self.rect.x - \
-                        25, self.rect.y + (self.rect.height/2)
-
-                elif self.weapon.dir == "right":
-                    self.weapon.rect.x, self.weapon.rect.y = self.rect.x + \
-                        16, self.rect.y + (self.rect.height/2)
-
-
-# Create soft state switching
-class Enemy(Character):
-    """Base class for AI enemy characters"""
-
-    def __init__(self, player, **kwargs):
-        super().__init__(**kwargs)
-
-        # self.dir = "left"
-        self.delta_x, self.delta_y = 0, 0
-        self.player = player
-        self.move_away = False
-        self.last_move_away_timer = 0
-
-    def auto_move(self, player):
-        """Pathfinding for enemies"""
-        if self.move_away == True:
-
-            if pygame.time.get_ticks() - self.last_move_away_timer > 250:
-                x = self.delta_x * -1
-                y = self.delta_y * -1
-
-                strength = 2
-                self.move(x * strength, y * strength)
-
-            self.move_away = False
-            self.last_move_away_timer = pygame.time.get_ticks()
-
-        else:
-            # Unity style movement
-            # First finds direction vector, then normalizes it to create unit vector.
-            goal_x, goal_y = player.rect.x, player.rect.y
-
-            dx = goal_x - self.rect.x
-            dy = goal_y - self.rect.y
-
-            distance = math.hypot(dx, dy)
-
-            if distance > 3:
-                dx, dy = dx/distance, dy/distance
-
-                # Final vector created by scaling unit vector by speed in the base class move method
-                self.delta_x = dx
-                self.delta_y = dy
-            else:
-                self.delta_x, self.delta_y = 0, 0
-
-    def update(self):
-
-        self.auto_move(self.player)
-        super().update(self.delta_x, self.delta_y)
-
-
-class Zombie(Enemy):
-    """Zombie Enemies:
-    name (str) : File name of sprite;
-    group (RenderPlain) : Pygame group of enemy objects;
-    pos (int, int) : (x, y) Coordinates of enemy;
-    health (int) : Enemy health value
-    """
-
-    def __init__(self, **kwargs):
-
-        super().__init__(**kwargs)
-
-        self.speed = 1.5
-        self.dmg = 10
-        self.max_hp = 150
-
-
-class Slime(Enemy):
-    """Slime Enemies"""
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        self.speed = 2
-        self.dmg = 20
-        self.max_hp = 50
-
-        self.time_since_dash = 0
-        self.last_dash = 0
-
-    def update(self):
-
-        p_x, p_y = self.player.rect.center
-        dx = self.rect.center[0] - p_x
-        dy = self.rect.center[1] - p_y
-        dist = math.hypot(dx, dy)
-
-        self.time_since_dash = pygame.time.get_ticks() - self.last_dash
-
-        if self.time_since_dash > 500 or dist < 20:
-            self.speed = 2
-
-        if dist < 50 and self.time_since_dash > 1000:
-            try:
-                dx /= dist
-                dy /= dist
-                self.speed = 6
-                self.move(-dx, -dy)
-
-                self.last_dash = pygame.time.get_ticks()
-
-            except ZeroDivisionError:
-                pass
-
-        else:
-            super().update()
-
-
-class Mage(Enemy):
-    """Mage Enemies"""
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-        self.speed = 2
-        self.dmg = 20
-
-        self.projectiles = pygame.sprite.RenderPlain()
-        self.max_hp = 100
-
-        self.time_since_atk = 0
-        self.last_atk = 0
-
-    def attack(self):
-
-        top = Projectile("mage_projectile.png",
-                         (self.rect.center[0], self.rect.center[1] - 30), (0, -1), 3)
-        bottom = Projectile(
-            "mage_projectile.png", (self.rect.center[0], self.rect.center[1] + 30), (0, 1), 3)
-        left = Projectile(
-            "mage_projectile.png", (self.rect.center[0] - 30, self.rect.center[1]), (-1, 0), 3)
-        right = Projectile(
-            "mage_projectile.png", (self.rect.center[0] + 30, self.rect.center[1]), (1, 0), 3)
-
-        self.projectiles.add(top)
-        self.projectiles.add(bottom)
-        self.projectiles.add(left)
-        self.projectiles.add(right)
-
-        self.last_atk = pygame.time.get_ticks()
-
-    def update(self):
-
-        self.time_since_atk = pygame.time.get_ticks() - self.last_atk
-
-        if self.time_since_atk > 2000:
-            self.delta_x, self.delta_y = 0, 0
-            self.attack()
-
-        elif self.time_since_atk < 1500:
-            super().update()
-
-        self.projectiles.update(self.player, self.projectiles)
-        self.projectiles.draw(screen)
-
-
-class Projectile(pygame.sprite.Sprite):
-
-    def __init__(self, image, pos, dir_vect, speed):
-        super().__init__()
-
-        self.image, self.rect = load_image(image)
-        self.rect.x, self.rect.y = pos
-
-        self.dmg = 30
-        self.speed = speed
-        self.dx, self.dy = dir_vect
-
-        self.time_created = pygame.time.get_ticks()
-
-    def update(self, player, projectiles):
-
-        if pygame.time.get_ticks() - self.time_created > 1500:
-            self.kill
-
-        self.rect.x += self.dx * self.speed
-        self.rect.y += self.dy * self.speed
-
-        for sprite in pygame.sprite.spritecollide(player, projectiles, False):
-            player.take_dmg(self.dmg)
-            projectiles.remove(sprite)
-
-
-class Interactables(pygame.sprite.Sprite):
-    """Base class for interactable objects"""
-
-    def __init__(self, name, image, pos):
-        super().__init__()
-
-        self.name = name
-        self.image, self.rect = load_image(image)
-        self.rect.x, self.rect.y = pos
-
-
-class Text(Interactables):
-    """Text box interactables"""
-
-    def __init__(self, name, image, pos):
-        super().__init__(name, image, pos)
-
-
-class Immovable(pygame.sprite.Sprite):
-    def __init__(self, image, pos, group):
-        super().__init__(group)
-        self.image, self.rect = load_image(image)
-        self.rect.x, self.rect.y = pos
-
-    def update(self):
-        pass
-
-
 class Game_Controller():
     """State controller for game"""
 
@@ -488,16 +176,16 @@ class Main_Menu(Game_States):
         pygame.mixer.music.play()
         pygame.mixer.music.set_volume(0.1)
 
-        self.player = Player(speed=2, name="player_right.png",
-                             group=self.player_sprite, pos=(200, SCRN_H/2), health=100)
+        self.player = Character.Player(speed=2, name="player_right.png",
+                                       group=self.player_sprite, pos=(200, SCRN_H/2), health=100)
 
-        weapon = Sword("Base Sword", "base_sword", 20)
+        weapon = Weapons.Sword("Base Sword", "base_sword", 20)
         self.weapon_sprites.add(weapon)
 
         self.player.pick_up_weapon(weapon)
 
-        self.startText = Text("start", "start.png", (300, 150))
-        self.credits = Text("credits", "credits.png", (300, 180))
+        self.startText = Interactables.Text("start", "start.png", (300, 150))
+        self.credits = Interactables.Text("credits", "credits.png", (300, 180))
 
         self.text_options.add(self.credits)
         self.text_options.add(self.startText)
@@ -565,6 +253,7 @@ class Main_Game(Game_States):
         """Creates next room"""
         num_enemies = random.randint(3, 6)
         room_type = None
+
         room_layout = random.randint(0, 2)
 
         objects_in_room = []
@@ -575,7 +264,7 @@ class Main_Game(Game_States):
             x, y = 300, 75
             for j in range(4):
                 for i in range(3):
-                    new_object = Immovable(
+                    new_object = Immovables.Immovable(
                         "torch_1.png", (x, y), self.immovable_sprites)
                     objects_in_room.append(new_object)
                     x += new_object.rect.width * 5
@@ -590,13 +279,13 @@ class Main_Game(Game_States):
             for i in range(3):
                 x += offset
                 y += offset
-                new_object = Immovable(
+                new_object = Immovables.Immovable(
                     "torch_1.png", (x, y), self.immovable_sprites)
                 objects_in_room.append(new_object)
             for i in range(3):
                 x += offset
                 y -= offset
-                new_object = Immovable(
+                new_object = Immovables.Immovable(
                     "torch_1.png", (x, y), self.immovable_sprites)
                 objects_in_room.append(new_object)
 
@@ -604,14 +293,14 @@ class Main_Game(Game_States):
             for i in range(3):
                 x += offset
                 y -= offset
-                new_object = Immovable(
+                new_object = Immovables.Immovable(
                     "torch_1.png", (x, y), self.immovable_sprites)
                 objects_in_room.append(new_object)
 
             for i in range(3):
                 x += offset
                 y += offset
-                new_object = Immovable(
+                new_object = Immovables.Immovable(
                     "torch_1.png", (x, y), self.immovable_sprites)
                 objects_in_room.append(new_object)
 
@@ -623,7 +312,7 @@ class Main_Game(Game_States):
             for i in range(4):
                 x -= offset_x
                 y += offset_y
-                new_object = Immovable(
+                new_object = Immovables.Immovable(
                     "torch_1.png", (x, y), self.immovable_sprites)
                 objects_in_room.append(new_object)
 
@@ -631,11 +320,11 @@ class Main_Game(Game_States):
             for i in range(4):
                 x += offset_x
                 y -= offset_y
-                new_object = Immovable(
+                new_object = Immovables.Immovable(
                     "torch_1.png", (x, y), self.immovable_sprites)
                 objects_in_room.append(new_object)
 
-            weapon = Hammer("hammer", "base_hammer", 30)
+            weapon = Weapons.Hammer("hammer", "base_hammer", 30)
             weapon.rect.x, weapon.rect.y = 50, 50
             self.weapon_sprites.add(weapon)
 
@@ -651,20 +340,21 @@ class Main_Game(Game_States):
                     spawn = False
             enemy = random.randint(0, 10)
             if enemy == 1:
-                new_enemy = Mage(name="mage.png", player=self.player,
-                                 group=self.enemy_sprites, pos=pos, health=100)
+                new_enemy = Character.Mage(name="mage.png", player=self.player,
+                                           group=self.enemy_sprites, pos=pos, health=100)
             elif enemy <= 5:
-                new_enemy = Slime(name="slime.png", player=self.player,
-                                  group=self.enemy_sprites, pos=pos, health=50)
+                new_enemy = Character.Slime(name="slime.png", player=self.player,
+                                            group=self.enemy_sprites, pos=pos, health=50)
             elif enemy <= 10:
-                new_enemy = Zombie(name="Zombie.png", player=self.player,
-                                   group=self.enemy_sprites, pos=pos, health=150)
+                new_enemy = Character.Zombie(name="Zombie.png", player=self.player,
+                                             group=self.enemy_sprites, pos=pos, health=150)
             objects_in_room.append(new_enemy)
 
         print(len(self.enemy_sprites.sprites()))
 
         # Room exit
-        self.exit.add(Interactables("exit", "right_exit.png", (670, 190)))
+        self.exit.add(Interactables.Interactables(
+            "exit", "right_exit.png", (670, 190)))
 
     def next_room(self):
 
@@ -699,9 +389,9 @@ class Main_Game(Game_States):
         pygame.mixer.music.play(-1)
         pygame.mixer.music.set_volume(0.3)
 
-        self.player = Player(speed=4, name="player_right.png",
-                             group=self.player_sprite, pos=(150, SCRN_H/2), health=250)
-        weapon = Sword("Base Sword", "base_sword", 20)
+        self.player = Character.Player(speed=4, name="player_right.png",
+                                       group=self.player_sprite, pos=(150, SCRN_H/2), health=250)
+        weapon = Weapons.Sword("Base Sword", "base_sword", 20)
         self.weapon_sprites.add(weapon)
 
         self.player.pick_up_weapon(weapon)
@@ -808,7 +498,7 @@ class Main_Game(Game_States):
                     self.weapon_sprites.remove(self.player.weapon)
                     self.player.pick_up_weapon(weapon)
 
-            # Collsion Detection #
+        # Collsion Detection #
 
         # Draw commands
         self.exit.draw(screen)
@@ -870,6 +560,7 @@ class Main_Game(Game_States):
 
 def main():
 
+    #     For previous testing          #
     #     room, room_rect = load_image("arena.png")
     #     arena.blit(room, (0, 0))
 
