@@ -4,15 +4,16 @@
 # File Name : Dungeon Crawl.py
 # Description : Beta Release of Dungeon Crawl
 
-from typing import final
 import pygame
 import os
 import random
-import math
 import Character
 import Immovables
 import Weapons
 import Interactables
+import CharacterGroup
+import ImagePlugin
+import AudioPlugin
 
 SCRN_W = 700
 SCRN_H = 400
@@ -30,20 +31,6 @@ clock = pygame.time.Clock()
 player = None
 
 WHITE = (255, 255, 255)
-
-
-def load_image(name):
-    path = os.path.join('data', name)
-    image = pygame.image.load(path)
-
-    return image, image.get_rect()
-
-
-def load_music(name):
-    path = os.path.join('music', name)
-    music = pygame.mixer.music.load(path)
-
-    return music
 
 
 def tint(surf, tint_color):
@@ -161,23 +148,25 @@ class Main_Menu(Game_States):
 
         self.player = None
 
-        self.player_sprite = pygame.sprite.RenderPlain()
+        self.player_sprite = CharacterGroup.CharacterGroup()
         self.weapon_sprites = pygame.sprite.RenderPlain()
         self.text_options = pygame.sprite.RenderPlain()
 
     def start(self):
         self.done = False
         # Loads Main Menu Room
-        self.background, background_rect = load_image("arena.png")
+        path = os.path.join('data', 'arena.png')
+        self.background = pygame.image.load(path)
         arena.blit(self.background, (0, 0))
 
         # Background Music
-        bg_music = load_music("main_menu.ogg")
+        path = os.path.join('music', 'main_menu.ogg')
+        pygame.mixer.music.load(path)
         pygame.mixer.music.play()
         pygame.mixer.music.set_volume(0.1)
 
         self.player = Character.Player(speed=2, name="player_right.png",
-                                       group=self.player_sprite, pos=(200, SCRN_H/2), health=100)
+                                       group=self.player_sprite, pos=(200, SCRN_H/2), health=100, )
 
         weapon = Weapons.Sword("Base Sword", "base_sword", 20)
         self.weapon_sprites.add(weapon)
@@ -217,8 +206,6 @@ class Main_Menu(Game_States):
         arena.blit(self.background, (0, 0))
         screen.blit(arena, (0, 0))
         self.player_sprite.draw(screen)
-        for sprite in self.player_sprite:
-            sprite.draw_health()
         self.weapon_sprites.draw(screen)
         self.text_options.draw(screen)
         pygame.display.flip()
@@ -238,9 +225,9 @@ class Main_Game(Game_States):
     def __init__(self):
         super().__init__()
 
-        self.player_sprite = pygame.sprite.RenderPlain()
-        self.weapon_sprites = pygame.sprite.RenderPlain()
+        self.player_sprite = CharacterGroup.CharacterGroup()
         self.enemy_sprites = pygame.sprite.RenderPlain()
+        self.weapon_sprites = pygame.sprite.RenderPlain()
         self.immovable_sprites = pygame.sprite.RenderPlain()
         self.exit = pygame.sprite.RenderPlain()
 
@@ -252,8 +239,6 @@ class Main_Game(Game_States):
     def create_room(self):
         """Creates next room"""
         num_enemies = random.randint(3, 6)
-        room_type = None
-
         room_layout = random.randint(0, 2)
 
         objects_in_room = []
@@ -379,13 +364,15 @@ class Main_Game(Game_States):
         """Starts main game state"""
         self.done = False
         # Loads Starting Room
-        self.room, room_rect = load_image("arena.png")
+        path = os.path.join('data', 'arena.png')
+        self.room = pygame.image.load(path)
+
         arena.blit(self.room, (0, 0))
 
         self.room_num = 1
 
         # Background Music
-        bg_music = load_music("main_game.ogg")
+        bg_music = AudioPlugin.Audio.load_music("main_game.ogg")
         pygame.mixer.music.play(-1)
         pygame.mixer.music.set_volume(0.3)
 
@@ -494,9 +481,11 @@ class Main_Game(Game_States):
                 self.next_room()
 
             for weapon in pygame.sprite.spritecollide(self.player, self.weapon_sprites, False):
-                if weapon != self.player.weapon:
-                    self.weapon_sprites.remove(self.player.weapon)
-                    self.player.pick_up_weapon(weapon)
+                if weapon == self.player.weapon:
+                    continue
+
+                self.weapon_sprites.remove(self.player.weapon)
+                self.player.pick_up_weapon(weapon)
 
         # Collsion Detection #
 
@@ -504,17 +493,13 @@ class Main_Game(Game_States):
         self.exit.draw(screen)
         self.immovable_sprites.draw(screen)
         self.player_sprite.draw(screen)
-        for sprite in self.player_sprite:
-            sprite.draw_health()
         self.weapon_sprites.draw(screen)
         self.enemy_sprites.draw(screen)
-        for sprite in self.enemy_sprites:
-            sprite.draw_health()
 
         if self.player.health <= 0:
             for x in range(0, 10000):
                 darken.set_alpha(x/100)
-            screen.blit(darken, (0, 0))
+                screen.blit(darken, (0, 0))
 
             game_over = font.render("Game Over!", True, WHITE)
             screen.blit(game_over, (250, 200))

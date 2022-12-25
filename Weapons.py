@@ -1,8 +1,9 @@
 import pygame
-import os
+import ImagePlugin
+import AudioPlugin
 
 
-class Weapons(pygame.sprite.Sprite):
+class Weapons(pygame.sprite.Sprite, ImagePlugin.Image, AudioPlugin.Audio):
     """Base class for all weapons"""
 
     def __init__(self, name):
@@ -18,8 +19,7 @@ class Weapons(pygame.sprite.Sprite):
 
         self.lock = False
 
-        path = os.path.join('data', 'attack.wav')
-        self.attack = pygame.mixer.Sound(path)
+        self.attack = self.load_music('attack.wav')
 
         super().__init__()
 
@@ -43,12 +43,6 @@ class Weapons(pygame.sprite.Sprite):
 
         self.rect = self.image.get_rect()
         self.attack.play()
-
-    def load_image(name):
-        path = os.path.join('data', name)
-        image = pygame.image.load(path)
-
-        return image, image.get_rect()
 
     def update(self):
 
@@ -75,14 +69,13 @@ class Sword(Weapons):
 
     def __init__(self, name, img, dmg):
 
-        self.image_up, self.rect_up = self.load_image(
-            os.path.join(img, "0.png"))
+        self.image_up, self.rect_up = self.load_image("base_sword\\0.png")
         self.image_down, self.rect_down = self.load_image(
-            os.path.join(img, "180.png"))
+            "base_sword\\180.png")
         self.image_left, self.rect_left = self.load_image(
-            os.path.join(img, "270.png"))
+            "base_sword\\270.png")
         self.image_right, self.rect_right = self.load_image(
-            os.path.join(img, "90.png"))
+            "base_sword\\90.png")
 
         self.desc = "Sword type"
         self.dmg = dmg
@@ -96,14 +89,13 @@ class Hammer(Weapons):
 
     def __init__(self, name, img, dmg):
 
-        self.image_up, self.rect_up = self.load_image(
-            os.path.join(img, "0.png"))
+        self.image_up, self.rect_up = self.load_image("base_hammer\\0.png")
         self.image_down, self.rect_down = self.load_image(
-            os.path.join(img, "180.png"))
+            "base_hammer\\180.png")
         self.image_left, self.rect_left = self.load_image(
-            os.path.join(img, "270.png"))
+            "base_hammer\\270.png")
         self.image_right, self.rect_right = self.load_image(
-            os.path.join(img, "90.png"))
+            "base_hammer\\90.png")
 
         self.desc = "Hammer type"
         self.dmg = dmg
@@ -112,14 +104,12 @@ class Hammer(Weapons):
         super().__init__(name)
 
 
-class Projectile(pygame.sprite.Sprite):
+class Projectile(ImagePlugin.Image):
 
     def __init__(self, pos, dir_vect, speed):
         super().__init__()
 
-        path = os.path.join('data', "mage_projectile")
-        self.image = pygame.image.load(path)
-        self.rect = self.image.get_rect()
+        self.image, self.rect = self.load_image("mage_projectile.png")
         self.rect.x, self.rect.y = pos
 
         self.dmg = 30

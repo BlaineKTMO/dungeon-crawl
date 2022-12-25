@@ -1,17 +1,19 @@
 import pygame
 import math
-import os
+from AudioPlugin import Audio
 import Weapons
+import ImagePlugin
 
 
-class Character(pygame.sprite.Sprite):
+class Character(pygame.sprite.Sprite, ImagePlugin.Image):
     """Base class for all character objects"""
+    """Utilizes Image plugin to handle display"""
 
-    def __init__(self, name, group,  pos, health, image):
+    def __init__(self, name, group,  pos, health):
         """Base class constructor"""
 
         # Retrieve sprite
-        self.image, self.rect = image
+        self.image, self.rect = self.load_image(name)
         self.rect.x, self.rect.y = pos
 
         self.health = health
@@ -88,7 +90,7 @@ class Character(pygame.sprite.Sprite):
                          (self.rect.left, self.rect.top - 7, 15 * health_percent, 3))
 
 
-class Player(Character):
+class Player(Character, Audio):
     """Player controlled character"""
 
     UP = pygame.K_w
@@ -113,8 +115,7 @@ class Player(Character):
         self.item = None
         self.weapon = None
 
-        path = os.path.join('data', 'walk.wav')
-        self.walk = pygame.mixer.Sound(path)
+        self.walk = self.load_music('walk.wav')
 
     def use_key(self):
         pass

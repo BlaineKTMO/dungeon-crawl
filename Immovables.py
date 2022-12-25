@@ -1,8 +1,7 @@
-import pygame
-import os
+import ImagePlugin
 
 
-class Immovable(pygame.sprite.Sprite):
+class Immovable(ImagePlugin.Image):
     def __init__(self, image, pos, group):
         super().__init__(group)
         self.image, self.rect = self.load_image(image)
@@ -10,9 +9,3 @@ class Immovable(pygame.sprite.Sprite):
 
     def update(self):
         pass
-
-    def load_image(self, name):
-        path = os.path.join('data', name)
-        image = pygame.image.load(path)
-
-        return image, image.get_rect()
